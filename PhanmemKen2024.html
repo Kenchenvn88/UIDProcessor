@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UID Processor</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f8f9fa;
+            color: #343a40;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 800px;
+            margin: auto;
+            padding: 20px;
+            background: #ffffff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            margin-top: 40px;
+        }
+        h1 {
+            text-align: center;
+            color: #ff6600;
+        }
+        .button, .input-file {
+            display: inline-block;
+            padding: 10px 20px;
+            margin: 10px 0;
+            font-size: 16px;
+            color: #ffffff;
+            background: linear-gradient(90deg, #ff6600, #ff3300);
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+            text-align: center;
+            text-decoration: none;
+        }
+        .button:hover, .input-file:hover {
+            background: linear-gradient(90deg, #ff3300, #ff6600);
+        }
+        .section {
+            margin: 20px 0;
+        }
+        .file-info, .file-preview {
+            margin: 20px 0;
+            padding: 10px;
+            background-color: #e9ecef;
+            border-radius: 4px;
+            overflow: auto;
+            max-height: 200px;
+        }
+        .file-preview pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .footer {
+            text-align: center;
+            padding: 10px 0;
+            margin-top: 40px;
+            font-size: 14px;
+            color: #ffffff;
+            background-color: #ff6600;
+            border-top: 2px solid #ff3300;
+        }
+        #progress {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+            font-size: 18px;
+            color: #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>UID Processor</h1>
+        
+        <div class="section">
+            <h2>Tệp bạn muốn lọc</h2>
+            <label for="fileInput" class="input-file">Chọn tệp</label>
+            <input type="file" id="fileInput" accept=".txt,.xlsx" style="display:none;" />
+            <button class="button" onclick="processFile()">Upload and Process File</button>
+            <p id="uidCount"></p>
+            <div id="file1Preview" class="file-preview" style="display:none;">
+                <h3 id="file1Title">File Preview:</h3>
+                <pre id="file1Content"></pre>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Tệp so sánh</h2>
+            <label for="newFileInput" class="input-file">Chọn tệp</label>
+            <input type="file" id="newFileInput" accept=".txt,.xlsx" style="display:none;" />
+            <button class="button" onclick="uploadNewFile()">Upload New File</button>
+            <p id="newFileCount"></p>
+            <div id="file2Preview" class="file-preview" style="display:none;">
+                <h3 id="file2Title">File Preview:</h3>
+                <pre id="file2Content"></pre>
+            </div>
+        </div>
+
+        <div class="section">
+            <p id="duplicateCount"></p>
+            <button class="button" id="filterButton" onclick="filterDuplicates()" style="display:none">Filter Duplicates</button>
+        </div>
+
+        <div class="section">
+            <div id="processedFilePreview" class="file-preview" style="display:none;">
+                <h3>Processed File Preview:</h3>
+                <pre id="processedFileContent"></pre>
+            </div>
+        </div>
+
+        <div class="section">
+            <button class="button" id="downloadButton" onclick="downloadFile()" style="display:none">Download Processed File</button>
+            <a id="downloadLink" style="display:none"></a>
+        </div>
+
+        <div class="section">
+            <p id="finalReport" style="display:none;"></p>
+        </div>
+        
+        <p id="progress">Processing...</p>
+    </div>
+    <div class="footer">
+        Copyright © 2024 Ken Chen, (+84) 964 266 706
+    </div>
+
+    <script>
+        let uidList = [];
+        let processedUidList = [];
+        let newUidList = [];
+        let duplicatesCount = 0;
+        let initialDuplicatesRemoved = 0;
+
+        function readFile(file, callback) {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const data = event.target.result;
+                callback(data, file.name);
+            };
+            reader.readAsText(file);
+        }
+
+        function processFile() {
+            const fileInput = document.getElementById('fileInput');
+            if (fileInput.files.length === 0) {
+                alert("Please upload a file first.");
+                return;
+            }
+
+            document.getElementById('progress').style.display = 'block';
+
+            readFile(fileInput.files[0], function(data, fileName) {
+                uidList = data.split(/\r?\n/).filter(uid => uid.trim() !== '');
+                const uniqueUids = new Set();
+                initialDuplicatesRemoved = 0;
+
+                processedUidList = uidList.filter(uid => {
+                    if (uniqueUids.has(uid)) {
+                        initialDuplicatesRemoved++;
+                        return false;
+                    } else {
+                        uniqueUids.add(uid);
+                        return true;
+                    }
+                });
+
+                document.getElementById('uidCount').innerText = `Total UID in first file: ${uidList.length}, Unique UID: ${processedUidList.length}, Duplicates removed: ${initialDuplicatesRemoved}`;
+                document.getElementById('file1Title').innerText = `File Preview: ${fileName}`;
+                document.getElementById('file1Content').innerText = data;
+                document.getElementById('file1Preview').style.display = 'block';
+                document.getElementById('progress').style.display = 'none';
+            });
+        }
+
+        function uploadNewFile() {
+            const newFileInput = document.getElementById('newFileInput');
+            if (newFileInput.files.length === 0) {
+                alert("Please upload a new file first.");
+                return;
+            }
+
+            document.getElementById('progress').style.display = 'block';
+
+            readFile(newFileInput.files[0], function(data, fileName) {
+                newUidList = data.split(/\r?\n/).filter(uid => uid.trim() !== '');
+                const uniqueNewUids = new Set(newUidList);
+                const newProcessedUidList = newUidList.filter(uid => uniqueNewUids.delete(uid));
+
+                duplicatesCount = 0;
+                const existingUidsSet = new Set(processedUidList);
+                for (let uid of newProcessedUidList) {
+                    if (existingUidsSet.has(uid)) {
+                        duplicatesCount++;
+                    }
+                }
+
+                document.getElementById('newFileCount').innerText = `Total UID in new file: ${newUidList.length}, Unique UID: ${newProcessedUidList.length}`;
+                document.getElementById('duplicateCount').innerText = `Number of duplicates with first file: ${duplicatesCount}`;
+                document.getElementById('file2Title').innerText = `File Preview: ${fileName}`;
+                document.getElementById('file2Content').innerText = data;
+                document.getElementById('file2Preview').style.display = 'block';
+                document.getElementById('filterButton').style.display = 'block';
+                document.getElementById('progress').style.display = 'none';
+            });
+        }
+
+        function filterDuplicates() {
+            const initialLength = processedUidList.length;
+            processedUidList = processedUidList.filter(uid => !new Set(newUidList).has(uid));
+            const finalLength = processedUidList.length;
+            const filteredDuplicatesCount = initialLength - finalLength;
+            const duplicatePercentage = ((filteredDuplicatesCount / initialLength) * 100).toFixed(2);
+
+            document.getElementById('processedFileContent').innerText = processedUidList.join('\n');
+            document.getElementById('processedFilePreview').style.display = 'block';
+            document.getElementById('downloadButton').style.display = 'block';
+
+            const report = `Processed file: Initial UIDs: ${initialLength}, Remaining UIDs: ${finalLength}, Removed Duplicates: ${filteredDuplicatesCount}, Percentage of duplicates: ${duplicatePercentage}%`;
+            document.getElementById('finalReport').innerText = report;
+            document.getElementById('finalReport').style.display = 'block';
+        }
+
+        function downloadFile() {
+            const blob = new Blob([processedUidList.join('\n')], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const link = document.getElementById('downloadLink');
+            link.href = url;
+            link.download = 'processed_uids.txt';
+            link.click();
+            URL.revokeObjectURL(url);
+        }
+
+        document.getElementById('fileInput').addEventListener('change', processFile);
+        document.getElementById('newFileInput').addEventListener('change', uploadNewFile);
+    </script>
+</body>
+</html>

@@ -116,6 +116,7 @@
 
         <div class="section">
             <button class="button" id="downloadButton" onclick="downloadFile()" style="display:none">Download Processed File</button>
+            <button class="button" id="copyButton" onclick="copyToClipboard()" style="display:none">Copy to Clipboard</button>
             <a id="downloadLink" style="display:none"></a>
         </div>
 
@@ -219,8 +220,9 @@
             document.getElementById('processedFileContent').innerText = processedUidList.join('\n');
             document.getElementById('processedFilePreview').style.display = 'block';
             document.getElementById('downloadButton').style.display = 'block';
+            document.getElementById('copyButton').style.display = 'block';
 
-            const report = `Processed file: Initial UIDs: ${initialLength}, Remaining UIDs: ${finalLength}, Removed Duplicates: ${filteredDuplicatesCount}, Percentage of duplicates: ${duplicatePercentage}%`;
+            const report = `Processed file: Initial UIDs: ${initialLength}, Remaining UIDs: ${finalLength}, Duplicates removed: ${filteredDuplicatesCount}, Duplicate percentage: ${duplicatePercentage}%`;
             document.getElementById('finalReport').innerText = report;
             document.getElementById('finalReport').style.display = 'block';
         }
@@ -233,6 +235,15 @@
             link.download = 'processed_uids.txt';
             link.click();
             URL.revokeObjectURL(url);
+        }
+
+        function copyToClipboard() {
+            const text = processedUidList.join('\n');
+            navigator.clipboard.writeText(text).then(() => {
+                alert("Processed UIDs copied to clipboard!");
+            }, (err) => {
+                console.error('Failed to copy: ', err);
+            });
         }
 
         document.getElementById('fileInput').addEventListener('change', processFile);

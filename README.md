@@ -114,7 +114,11 @@
         <div id="progress">Processing...</div>
         
         <div id="finalReport" style="display: none;"></div>
-        
+        <div class="section">
+    		<h2>Processed Data Preview</h2>
+    		<div id="processedFileInfo"></div>
+    		<div id="processedFilePreview" class="file-preview"></div>
+	</div>
         <button id="downloadLink" class="button" style="display:none;" onclick="downloadFile()">Download Processed File</button>
         <button class="button" onclick="copyToClipboard()" style="display:none;">Copy to Clipboard</button>
         
@@ -219,13 +223,15 @@
         }
 
         function downloadFile() {
-            const blob = new Blob([processedUidList.join('\n')], { type: 'text/plain' });
-            const url = URL.createObjectURL(blob);
-            const link = document.getElementById('downloadLink');
-            link.href = url;
-            link.download = 'processed_uids.txt';
-            link.click();
-            URL.revokeObjectURL(url);
+                const blob = new Blob([processedUidList.join('\n')], { type: 'text/plain' });
+   		const url = URL.createObjectURL(blob);
+    		const link = document.createElement('a');
+    		link.href = url;
+    		link.download = 'processed_uids.txt';
+    		document.body.appendChild(link);
+    		link.click();
+    		document.body.removeChild(link);
+    		URL.revokeObjectURL(url);
         }
 
         function copyToClipboard() {
@@ -244,8 +250,10 @@
             document.getElementById('progress').style.display = 'block';
             setTimeout(() => {
                 document.getElementById('progress').style.display = 'none';
-                compareUidList([]);
-            }, 2000); // Simulate processing time
+        	const processedData = processedUidList.slice(0, 10); // Giới hạn số lượng dữ liệu hiển thị
+        	document.getElementById('processedFilePreview').innerText = processedData.join('\n');
+        	document.getElementById('processedFileInfo').innerText = `Processed Data Preview`;
+	    }, 2000); // Simulate processing time
         }
 
         function processData() {
@@ -256,7 +264,7 @@
             let failCount = 0;
             let otherCount = 0;
 
-            lines.forEach((line, index) => {
+            lines.forEach((line, x=0) => {
                 const match = line.match(/(\d+), (\d{2}-\d{2}-\d{4}) (\d{2}:\d{2}) Tài khoản (\d+) nhắn tin cho bạn bè có user ID (\d+) (thành công|thất bại|.+)/);
                 if (match) {
                     const [_, stt, date, time, account, uid, status] = match;
@@ -271,7 +279,7 @@
                         statusCode = 'Null';
                         otherCount++;
                     }
-                    data.push({ stt: index + 1, date, time, uid, status: statusCode });
+                    data.push({ stt: x + 1, date, time, uid, status: statusCode });
                 }
             });
 

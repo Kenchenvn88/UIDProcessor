@@ -2,7 +2,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UID Processor</title>
+    <title>UID Data Processor</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -12,7 +12,7 @@
             padding: 0;
         }
         .container {
-            max-width: 800px;
+            max-width: 1000px;
             margin: auto;
             padding: 20px;
             background: #ffffff;
@@ -20,7 +20,7 @@
             border-radius: 8px;
             margin-top: 40px;
         }
-        h1 {
+        h1, h2 {
             text-align: center;
             color: #ff6600;
         }
@@ -72,159 +72,150 @@
             font-size: 18px;
             color: #dc3545;
         }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        #chart {
+            margin: 20px 0;
+        }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div class="container">
-        <h1>UID Processor</h1>
+        <h1>UID Data Processor</h1>
         
         <div class="section">
             <h2>Tệp bạn muốn lọc</h2>
-            <label for="fileInput" class="input-file">Chọn tệp</label>
-            <input type="file" id="fileInput" accept=".txt,.xlsx" style="display:none;" />
-            <button class="button" onclick="processFile()">Upload and Process File</button>
-            <p id="uidCount"></p>
-            <div id="file1Preview" class="file-preview" style="display:none;">
-                <h3 id="file1Title">File Preview:</h3>
-                <pre id="file1Content"></pre>
-            </div>
-        </div>
-
-        <div class="section">
-            <h2>Tệp so sánh</h2>
-            <label for="newFileInput" class="input-file">Chọn tệp</label>
-            <input type="file" id="newFileInput" accept=".txt,.xlsx" style="display:none;" />
-            <button class="button" onclick="uploadNewFile()">Upload New File</button>
-            <p id="newFileCount"></p>
-            <div id="file2Preview" class="file-preview" style="display:none;">
-                <h3 id="file2Title">File Preview:</h3>
-                <pre id="file2Content"></pre>
-            </div>
-        </div>
-
-        <div class="section">
-            <p id="duplicateCount"></p>
-            <button class="button" id="filterButton" onclick="filterDuplicates()" style="display:none">Filter Duplicates</button>
-        </div>
-
-        <div class="section">
-            <div id="processedFilePreview" class="file-preview" style="display:none;">
-                <h3>Processed File Preview:</h3>
-                <pre id="processedFileContent"></pre>
-            </div>
-        </div>
-
-        <div class="section">
-            <button class="button" id="downloadButton" onclick="downloadFile()" style="display:none">Download Processed File</button>
-            <button class="button" id="copyButton" onclick="copyToClipboard()" style="display:none">Copy to Clipboard</button>
-            <a id="downloadLink" style="display:none"></a>
-        </div>
-
-        <div class="section">
-            <p id="finalReport" style="display:none;"></p>
+            <input type="file" id="fileInput" class="input-file">
+            <div id="fileInfo"></div>
+            <div id="filePreview" class="file-preview"></div>
         </div>
         
-        <p id="progress">Processing...</p>
+        <div class="section">
+            <h2>Tệp so sánh</h2>
+            <input type="file" id="newFileInput" class="input-file">
+            <div id="newFileInfo"></div>
+            <div id="newFilePreview" class="file-preview"></div>
+        </div>
+        
+        <button class="button" onclick="filterDuplicates()">Filter Duplicates</button>
+        
+        <div id="progress">Processing...</div>
+        
+        <div id="finalReport" style="display: none;"></div>
+        
+        <button id="downloadLink" class="button" style="display:none;" onclick="downloadFile()">Download Processed File</button>
+        <button class="button" onclick="copyToClipboard()" style="display:none;">Copy to Clipboard</button>
+        
+        <div class="section">
+            <h2>Nhập dữ liệu</h2>
+            <textarea id="inputData" rows="10" style="width: 100%;"></textarea>
+            <button class="button" onclick="processData()">Xử lý dữ liệu</button>
+        </div>
+
+        <div class="section" id="resultSection" style="display:none;">
+            <h2>Kết quả xử lý</h2>
+            <div id="stats"></div>
+            <table id="resultTable">
+                <thead>
+                    <tr>
+                        <th>STT</th>
+                        <th>Date</th>
+                        <th>Time</th>
+                        <th>ID</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+            <button class="button" onclick="downloadExcel()">Download Excel</button>
+            <button class="button" onclick="copyToClipboard()">Copy to Clipboard</button>
+        </div>
+        
+        <div class="section" id="chartSection" style="display:none;">
+            <h2>Biểu đồ</h2>
+            <canvas id="chart"></canvas>
+        </div>
     </div>
     <div class="footer">
         Copyright © 2024 Ken Chen, (+84) 964 266 706
     </div>
 
     <script>
-        let uidList = [];
         let processedUidList = [];
-        let newUidList = [];
-        let duplicatesCount = 0;
-        let initialDuplicatesRemoved = 0;
 
-        function readFile(file, callback) {
+        function processFile(event) {
+            const file = event.target.files[0];
             const reader = new FileReader();
-            reader.onload = function(event) {
-                const data = event.target.result;
-                callback(data, file.name);
+            reader.onload = function(e) {
+                const content = e.target.result;
+                document.getElementById('filePreview').innerText = content;
+                document.getElementById('fileInfo').innerText = `File Name: ${file.name}, File Size: ${file.size} bytes`;
+                processUidList(content, 'file');
             };
             reader.readAsText(file);
         }
 
-        function processFile() {
-            const fileInput = document.getElementById('fileInput');
-            if (fileInput.files.length === 0) {
-                alert("Please upload a file first.");
-                return;
-            }
-
-            document.getElementById('progress').style.display = 'block';
-
-            readFile(fileInput.files[0], function(data, fileName) {
-                uidList = data.split(/\r?\n/).filter(uid => uid.trim() !== '');
-                const uniqueUids = new Set();
-                initialDuplicatesRemoved = 0;
-
-                processedUidList = uidList.filter(uid => {
-                    if (uniqueUids.has(uid)) {
-                        initialDuplicatesRemoved++;
-                        return false;
-                    } else {
-                        uniqueUids.add(uid);
-                        return true;
-                    }
-                });
-
-                document.getElementById('uidCount').innerText = `Total UID in first file: ${uidList.length}, Unique UID: ${processedUidList.length}, Duplicates removed: ${initialDuplicatesRemoved}`;
-                document.getElementById('file1Title').innerText = `File Preview: ${fileName}`;
-                document.getElementById('file1Content').innerText = data;
-                document.getElementById('file1Preview').style.display = 'block';
-                document.getElementById('progress').style.display = 'none';
-            });
+        function uploadNewFile(event) {
+            const file = event.target.files[0];
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const content = e.target.result;
+                document.getElementById('newFilePreview').innerText = content;
+                document.getElementById('newFileInfo').innerText = `File Name: ${file.name}, File Size: ${file.size} bytes`;
+                processUidList(content, 'newFile');
+            };
+            reader.readAsText(file);
         }
 
-        function uploadNewFile() {
-            const newFileInput = document.getElementById('newFileInput');
-            if (newFileInput.files.length === 0) {
-                alert("Please upload a new file first.");
-                return;
-            }
-
-            document.getElementById('progress').style.display = 'block';
-
-            readFile(newFileInput.files[0], function(data, fileName) {
-                newUidList = data.split(/\r?\n/).filter(uid => uid.trim() !== '');
-                const uniqueNewUids = new Set(newUidList);
-                const newProcessedUidList = newUidList.filter(uid => uniqueNewUids.delete(uid));
-
-                duplicatesCount = 0;
-                const existingUidsSet = new Set(processedUidList);
-                for (let uid of newProcessedUidList) {
-                    if (existingUidsSet.has(uid)) {
-                        duplicatesCount++;
-                    }
-                }
-
-                document.getElementById('newFileCount').innerText = `Total UID in new file: ${newUidList.length}, Unique UID: ${newProcessedUidList.length}`;
-                document.getElementById('duplicateCount').innerText = `Number of duplicates with first file: ${duplicatesCount}`;
-                document.getElementById('file2Title').innerText = `File Preview: ${fileName}`;
-                document.getElementById('file2Content').innerText = data;
-                document.getElementById('file2Preview').style.display = 'block';
-                document.getElementById('filterButton').style.display = 'block';
-                document.getElementById('progress').style.display = 'none';
+        function processUidList(content, type) {
+            const lines = content.split(/\r?\n/);
+            let uidList = [];
+            lines.forEach(line => {
+                const uid = line.trim();
+                if (uid) uidList.push(uid);
             });
+
+            if (type === 'file') {
+                processedUidList = uidList;
+            } else {
+                compareUidList(uidList);
+            }
         }
 
-        function filterDuplicates() {
+        function compareUidList(newUidList) {
             const initialLength = processedUidList.length;
-            processedUidList = processedUidList.filter(uid => !new Set(newUidList).has(uid));
+            const newInitialLength = newUidList.length;
+
+            processedUidList = processedUidList.filter(uid => !newUidList.includes(uid));
+            newUidList = newUidList.filter(uid => !processedUidList.includes(uid));
+
             const finalLength = processedUidList.length;
-            const filteredDuplicatesCount = initialLength - finalLength;
-            const duplicatePercentage = ((filteredDuplicatesCount / initialLength) * 100).toFixed(2);
+            const newFinalLength = newUidList.length;
+            const removedCount = initialLength - finalLength;
+            const newRemovedCount = newInitialLength - newFinalLength;
 
-            document.getElementById('processedFileContent').innerText = processedUidList.join('\n');
-            document.getElementById('processedFilePreview').style.display = 'block';
-            document.getElementById('downloadButton').style.display = 'block';
-            document.getElementById('copyButton').style.display = 'block';
+            const duplicatePercentage = ((removedCount / initialLength) * 100).toFixed(2);
+            const newDuplicatePercentage = ((newRemovedCount / newInitialLength) * 100).toFixed(2);
 
-            const report = `Processed file: Initial UIDs: ${initialLength}, Remaining UIDs: ${finalLength}, Duplicates removed: ${filteredDuplicatesCount}, Duplicate percentage: ${duplicatePercentage}%`;
-            document.getElementById('finalReport').innerText = report;
+            document.getElementById('finalReport').innerText = `
+                Old File: Initial Length: ${initialLength}, Final Length: ${finalLength}, Duplicates removed: ${removedCount}, Duplicate percentage: ${duplicatePercentage}%\n
+                New File: Initial Length: ${newInitialLength}, Final Length: ${newFinalLength}, Duplicates removed: ${newRemovedCount}, Duplicate percentage: ${newDuplicatePercentage}%
+            `;
             document.getElementById('finalReport').style.display = 'block';
+            document.getElementById('downloadLink').style.display = 'inline-block';
+            document.querySelector('.button[onclick="copyToClipboard()"]').style.display = 'inline-block';
         }
 
         function downloadFile() {
@@ -248,6 +239,100 @@
 
         document.getElementById('fileInput').addEventListener('change', processFile);
         document.getElementById('newFileInput').addEventListener('change', uploadNewFile);
+
+        function filterDuplicates() {
+            document.getElementById('progress').style.display = 'block';
+            setTimeout(() => {
+                document.getElementById('progress').style.display = 'none';
+                compareUidList([]);
+            }, 2000); // Simulate processing time
+        }
+
+        function processData() {
+            const inputData = document.getElementById('inputData').value;
+            const lines = inputData.split('\n');
+            let data = [];
+            let successCount = 0;
+            let failCount = 0;
+            let otherCount = 0;
+
+            lines.forEach((line, index) => {
+                const match = line.match(/(\d+), (\d{2}-\d{2}-\d{4}) (\d{2}:\d{2}) Tài khoản (\d+) nhắn tin cho bạn bè có user ID (\d+) (thành công|thất bại|.+)/);
+                if (match) {
+                    const [_, stt, date, time, account, uid, status] = match;
+                    let statusCode = '';
+                    if (status === 'thành công') {
+                        statusCode = 1;
+                        successCount++;
+                    } else if (status === 'thất bại') {
+                        statusCode = 0;
+                        failCount++;
+                    } else {
+                        statusCode = 'Null';
+                        otherCount++;
+                    }
+                    data.push({ stt: index + 1, date, time, uid, status: statusCode });
+                }
+            });
+
+            const total = successCount + failCount + otherCount;
+            const successRate = ((successCount / total) * 100).toFixed(2);
+            const failRate = ((failCount / total) * 100).toFixed(2);
+            const otherRate = ((otherCount / total) * 100).toFixed(2);
+
+            document.getElementById('stats').innerHTML = `
+                Total IDs: ${total}<br>
+                Success: ${successCount} (${successRate}%)<br>
+                Fail: ${failCount} (${failRate}%)<br>
+                Other: ${otherCount} (${otherRate}%)
+            `;
+
+            const tbody = document.getElementById('resultTable').querySelector('tbody');
+            tbody.innerHTML = '';
+            data.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td>${row.stt}</td><td>${row.date}</td><td>${row.time}</td><td>${row.uid}</td><td>${row.status}</td>`;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('resultSection').style.display = 'block';
+
+            const ctx = document.getElementById('chart').getContext('2d');
+            new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: ['Success', 'Fail', 'Other'],
+                    datasets: [{
+                        data: [successRate, failRate, otherRate],
+                        backgroundColor: ['#28a745', '#dc3545', '#ffc107']
+                    }]
+                }
+            });
+            document.getElementById('chartSection').style.display = 'block';
+        }
+
+        function downloadExcel() {
+            const rows = [['STT', 'Date', 'Time', 'ID', 'Status']];
+            const tableRows = document.querySelectorAll('#resultTable tbody tr');
+            tableRows.forEach(row => {
+                const cols = row.querySelectorAll('td');
+                const rowData = [];
+                cols.forEach(col => rowData.push(col.innerText));
+                rows.push(rowData);
+            });
+
+            let csvContent = "data:text/csv;charset=utf-8," 
+                + rows.map(e => e.join(",")).join("\n");
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "processed_data.csv");
+            document.body.appendChild(link); // Required for FF
+
+            link.click();
+            document.body.removeChild(link);
+        }
     </script>
 </body>
 </html>
